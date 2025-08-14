@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Fusion Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+            color: #e8e8e8;
+            overflow: hidden;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+        
+        /* Top-right toggle switch container */
+        #top-right-controls {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            z-index: 120;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(20, 20, 20, 0.9);
+            padding: 12px 16px;
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        
+        #theme-icon {
+            font-size: 18px;
+            line-height: 1;
+            user-select: none;
+            opacity: 0.8;
+        }
+        
+        /* Toggle switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 28px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 
+                        0 1px 2px rgba(255, 255, 255, 0.05);
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            top: 3px;
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
+                        0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        input:checked + .slider {
+            background: linear-gradient(145deg, #4a9eff, #357abd);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+            background: linear-gradient(145deg, #ffffff, #f8f8f8);
+        }
+        
+        #app {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            z-index: 100;
+            background: rgba(15, 15, 15, 0.85);
+            padding: 24px;
+            border-radius: 16px;
+            backdrop-filter: blur(24px);
+            min-width: 320px;
+            max-width: 380px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4),
+                        0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        #ui:hover {
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(32px);
+            transform: translateY(-2px);
+            box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5),
+                        0 12px 24px rgba(0, 0, 0, 0.3);
+        }
+        
+        .footer-links {
+            margin-top: 16px;
+            font-size: 13px;
+            font-weight: 400;
+        }
+
+        .footer-links a {
+            color: #4a9eff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .footer-links a:hover {
+            color: #66b3ff;
+            text-decoration: underline;
+        }
+
+        /* Graph positioning - now includes magnetometer and fusion with mag */
+        #accel-graph {
+            position: absolute;
+            right: 24px;
+            bottom: 820px;
+            width: 380px;
+            height: 130px;
+            z-index: 90;
+            border-radius: 12px;
+            overflow: hidden;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4),
+                        0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        #gyro-graph {
+            position: absolute;
+            right: 24px;
+            bottom: 670px;
+            width: 380px;
+            height: 130px;
+            z-index: 90;
+            border-radius: 12px;
+            overflow: hidden;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        
+        #mag-graph {
+            position: absolute;
+            right: 24px;
+            bottom: 520px;
+            width: 380px;
+            height: 130px;
+            z-index: 90;
+            border-radius: 12px;
+            overflow: hidden;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        
+        #gyro-int-graph {
+            position: absolute;
+            right: 24px;
+            bottom: 370px;
+            width: 380px;
+            height: 130px;
+            z-index: 90;
+            border-radius: 12px;
+            overflow: hidden;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        
+        #fusion-graph {
+            position: absolute;
+            right: 24px;
+            bottom: 220px;
+            width: 380px;
+            height: 130px;
+            z-index: 90;
+            border-radius: 12px;
+            overflow: hidden;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        
+        #fusion-mag-graph {
+            position: absolute;
+            right: 24px;
+            bottom: 70px;
+            width: 380px;
+            height: 130px;
+            z-index: 90;
+            border-radius: 12px;
+            overflow: hidden;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        
+        #temp-graph {
+            position: absolute;
+            right: 420px;
+            bottom: 70px;
+            width: 280px;
+            height: 130px;
+            z-index: 90;
+            border-radius: 12px;
+            overflow: hidden;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group-main {
+            margin-bottom: 20px;
+        }
+        .control-group h2 {
+            margin-bottom: 600px;
+            color: #4a9eff;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+        .control-group h3 {
+            margin-bottom: 12px;
+            color: #4a9eff;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+        
+        .data-display {
+            font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            font-weight: 400;
+            color: #d0d0d0;
+        }
+        
+        button {
+            background: linear-gradient(145deg, #4a9eff, #357abd);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            margin-right: 12px;
+            margin-bottom: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2),
+                        0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:hover {
+            background: linear-gradient(145deg, #66b3ff, #4a9eff);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(74, 158, 255, 0.3),
+                        0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            transition: all 0.1s ease;
+        }
+        
+        button:disabled {
+            background: linear-gradient(145deg, #444, #333);
+            cursor: not-allowed;
+            color: #888;
+            box-shadow: none;
+            transform: none;
+        }
+        
+        .status {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin: 12px 0;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .status.connected {
+            background: linear-gradient(145deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1));
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .status.disconnected {
+            background: linear-gradient(145deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1));
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        /* Enhanced form controls */
+        input[type="range"] {
+            width: 180px;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #333, #555);
+            outline: none;
+            -webkit-appearance: none;
+            margin: 8px 0;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #4a9eff, #357abd);
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(74, 158, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+        }
+        
+        input[type="radio"] {
+            margin-right: 8px;
+            accent-color: #4a9eff;
+            transform: scale(1.1);
+        }
+        
+        label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #d0d0d0;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        
+        label:hover {
+            color: #e8e8e8;
+        }
+        
+        /* File input styling */
+        #model-file-btn {
+            font-size: 13px;
+            padding: 8px 16px;
+            background: linear-gradient(145deg, #555, #444);
+        }
+        
+        #model-file-btn:hover {
+            background: linear-gradient(145deg, #666, #555);
+        }
+        
+        #model-file-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        /* Grid layout improvements */
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px 12px;
+            align-items: center;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="canvas-container"></div>
+        <div id="top-right-controls">
+            <span id="theme-icon" aria-hidden="true">🌙</span>
+            <label class="switch" title="Toggle sky (light/dark)">
+                <input type="checkbox" id="theme-toggle-switch">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div id="ui">    
+            <div class="control-group">
+                <h3>Orientation Mode</h3>
+                <div class="data-display" style="display:flex; gap:12px; align-items:center; margin-top:6px; flex-wrap: wrap;">
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="mode" id="mode-accel" checked>
+                        <span>Accelerometer (abs)</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="mode" id="mode-gyro">
+                        <span>Gyro (integrated)</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="mode" id="mode-fusion">
+                        <span>Fusion (IMU Only)</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="mode" id="mode-fusion-mag">
+                        <span>Fusion (IMU + Mag)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group" id="smoothing-group">
+                <h3>Smoothing</h3>
+                <div style="margin-top: 10px; display:flex; align-items:center; gap:8px; flex-wrap: wrap;">
+                    <label for="smoothing-slider" style="font-size: 12px; color: #ccc;">Time constant:</label>
+                    <input type="range" id="smoothing-slider" min="0" max="100" value="50" style="width: 160px;">
+                    <span id="smoothing-value" style="font-size: 11px; color: #aaa;">~160 ms</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Sensor Data</h3>
+                <div class="data-display">
+                    <div>Accel: <span id="accel-x">0.000</span>, <span id="accel-y">0.000</span>, <span id="accel-z">0.000</span>g</div>
+                    <div>Gyro (inst): <span id="gyro-x">0.00</span>, <span id="gyro-y">0.00</span>, <span id="gyro-z">0.00</span>°/s</div>
+                    <div>Mag: <span id="mag-x">0.00</span>, <span id="mag-y">0.00</span>, <span id="mag-z">0.00</span>μT</div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap: wrap;">
+                        <span>Gyro (integrated): <span id="gyro-int-roll">0.0</span>°, <span id="gyro-int-pitch">0.0</span>°, <span id="gyro-int-yaw">0.0</span>°</span>
+                        <button id="reset-gyro" style="padding: 4px 8px; font-size: 12px;">Reset Gyro</button>
+                    </div>
+                    <div>Fusion (IMU): <span id="fusion-roll">—</span>°, <span id="fusion-pitch">—</span>°, <span id="fusion-yaw">—</span>°</div>
+                    <div>Fusion (IMU+Mag): <span id="fusion-mag-roll">—</span>°, <span id="fusion-mag-pitch">—</span>°, <span id="fusion-mag-yaw">—</span>°</div>
+                    <div>Temperature: <span id="temperature">0.0</span>°C</div>
+                </div>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/thezerohz" target="_blank" rel="noopener noreferrer">Developed For BUBT HUB</a>
+            </div>
+                            <h3>Connection</h3>
+                <div style="display:flex; gap:10px; flex-wrap: wrap; align-items:center; margin-bottom:8px;">
+                    <button id="connect-btn">Connect via WebSerial</button>
+                    <button id="connect-ble-btn">Connect via WebBLE</button>
+                </div>
+                <div id="connection-status" class="status disconnected">Disconnected</div>
+                <div id="message-rate" class="data-display" style="font-size: 12px; color: #aaa; margin-top: 4px;">Msgs/s: 0</div>
+                <div style="margin-top: 8px; display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center;">
+                    <!--<label for="model-file" style="font-size: 12px; color: #ccc;">Load custom model:</label>-->
+                    <button id="model-file-btn"></button>
+                    <span id="model-file-name" style="font-size: 11px; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                    <input type="file" id="model-file" accept=".glb,.gltf" style="display:none;" />
+                </div> 
+        </div>
+        
+        <!-- All sensor graphs positioned on the right side -->
+        <canvas id="accel-graph"></canvas>
+        <canvas id="gyro-graph"></canvas>
+        <canvas id="mag-graph"></canvas>
+        <canvas id="gyro-int-graph"></canvas>
+        <canvas id="fusion-graph"></canvas>
+        <canvas id="fusion-mag-graph"></canvas>
+        <canvas id="temp-graph"></canvas>
+    </div>
+    
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

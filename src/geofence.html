@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Geofencing Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .shape-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        .shape-controls label {
+            font-weight: bold;
+            color: #333;
+            margin-right: 10px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            font-size: 12px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        button.active {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        select {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            background: white;
+            color: #333;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .algorithm-info {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        .info-panel {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .status-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 120px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(240, 147, 251, 0.3);
+        }
+        
+        .status-card h3 {
+            margin: 0 0 5px 0;
+            font-size: 1em;
+        }
+        
+        .status-card p {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .performance-card {
+            background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+        }
+        
+        #mapContainer {
+            width: 100%;
+            height: 600px;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            position: relative;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            cursor: crosshair;
+            overflow: hidden;
+            box-shadow: inset 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .geofence {
+            position: absolute;
+            border: 3px dashed #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+        
+        .geofence.circle {
+            border-radius: 50%;
+        }
+        
+        .geofence.triangle {
+            background: transparent;
+            border: none;
+        }
+        
+        .geofence.polygon {
+            background: rgba(255, 68, 68, 0.1);
+            border: none;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(255, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
+        }
+        
+        .cow {
+            position: absolute;
+            font-size: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: cowBob 3s ease-in-out infinite;
+            user-select: none;
+            z-index: 10;
+        }
+        
+        @keyframes cowBob {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-5px) rotate(2deg); }
+        }
+        
+        .cow:hover {
+            transform: scale(1.2) rotate(10deg);
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+        }
+        
+        .cow.animated {
+            animation: cowBob 3s ease-in-out infinite, cowMove 0.1s linear infinite;
+        }
+        
+        .cow.inside {
+            filter: brightness(1.2) drop-shadow(0 0 10px #4CAF50);
+        }
+        
+        .cow.outside {
+            filter: brightness(0.8) drop-shadow(0 0 10px #ff4444);
+        }
+        
+        .coordinates {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .drawing-mode {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .polygon-point {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #ff4444;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+        
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐄 Enhanced Geofencing Simulation 🐄</h1>
+        
+        <div class="algorithm-info">
+            <label for="algorithmSelect"><strong>Algorithm:</strong></label>
+            <select id="algorithmSelect">
+                <option value="raycasting">Ray Casting</option>
+                <option value="winding">Winding Number</option>
+                <option value="crossings">Crossing Number</option>
+                <option value="boundingbox">Bounding Box (Fast)</option>
+            </select>
+            <span id="algorithmDescription">Ray Casting: Shoots ray from point and counts intersections</span>
+        </div>
+        
+        <div class="shape-controls">
+            <label><strong>Geofence Shapes:</strong></label>
+            <button id="circleBtn" class="shape-btn" data-shape="circle">🔴 Circle</button>
+            <button id="rectBtn" class="shape-btn" data-shape="rectangle">⬜ Rectangle</button>
+            <button id="squareBtn" class="shape-btn" data-shape="square">🟨 Square</button>
+            <button id="triangleBtn" class="shape-btn" data-shape="triangle">🔺 Triangle</button>
+            <button id="polygonBtn" class="shape-btn" data-shape="polygon">🔷 Polygon</button>
+            <button id="customBtn" class="shape-btn" data-shape="custom">✏️ Custom Draw</button>
+        </div>
+        
+        <div class="controls">
+            <button id="addCowBtn">🐄 Add Cow</button>
+            <button id="clearBtn">🗑️ Clear All</button>
+            <button id="randomCowsBtn">🎲 Add 10 Random Cows</button>
+            <button id="animateBtn">🎬 Animate Cows</button>
+            <button id="performanceTestBtn">⚡ Performance Test</button>
+        </div>
+        
+        <div class="info-panel">
+            <div class="status-card">
+                <h3>Total Cows</h3>
+                <p id="totalCows">0</p>
+            </div>
+            <div class="status-card">
+                <h3>Inside Fence</h3>
+                <p id="insideCows">0</p>
+            </div>
+            <div class="status-card">
+                <h3>Outside Fence</h3>
+                <p id="outsideCows">0</p>
+            </div>
+            <div class="status-card">
+                <h3>Geofences</h3>
+                <p id="totalGeofences">0</p>
+            </div>
+            <div class="status-card performance-card">
+                <h3>Avg Check Time</h3>
+                <p id="avgTime">0ms</p>
+            </div>
+            <div class="status-card performance-card">
+                <h3>Total Checks</h3>
+                <p id="totalChecks">0</p>
+            </div>
+        </div>
+        
+        <div id="mapContainer">
+            <div class="coordinates" id="coordinates">Move mouse over map</div>
+            <div class="drawing-mode" id="drawingMode" style="display: none;"></div>
+            <svg id="svgLayer"></svg>
+        </div>
+    </div>
+
+    <script>
+        class GeofencingSimulation {
+            constructor() {
+                this.mapContainer = document.getElementById('mapContainer');
+                this.svgLayer = document.getElementById('svgLayer');
+                this.mode = 'none';
+                this.selectedShape = 'circle';
+                this.algorithm = 'raycasting';
+                this.cows = [];
+                this.geofences = [];
+                this.isDragging = false;
+                this.draggedCow = null;
+                
+                // Animation properties
+                this.isAnimating = false;
+                this.animationFrame = null;
+                
+                // For polygon/custom drawing
+                this.isDrawing = false;
+                this.currentPoints = [];
+                this.performanceStats = { totalTime: 0, totalChecks: 0 };
+                
+                this.initializeEventListeners();
+                this.updateStats();
+            }
+            
+            initializeEventListeners() {
+                // Algorithm selector
+                document.getElementById('algorithmSelect').addEventListener('change', (e) => {
+                    this.algorithm = e.target.value;
+                    this.updateAlgorithmDescription();
+                    this.checkAllCowsInGeofences();
+                });
+                
+                // Shape buttons
+                document.querySelectorAll('.shape-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.selectedShape = e.target.dataset.shape;
+                        this.setMode('geofence');
+                    });
+                });
+                
+                // Other buttons
+                document.getElementById('addCowBtn').addEventListener('click', () => {
+                    this.setMode('cow');
+                });
+                
+                document.getElementById('clearBtn').addEventListener('click', () => {
+                    this.clearAll();
+                });
+                
+                document.getElementById('randomCowsBtn').addEventListener('click', () => {
+                    this.addRandomCows();
+                });
+                
+                document.getElementById('animateBtn').addEventListener('click', () => {
+                    this.toggleAnimation();
+                });
+                
+                document.getElementById('performanceTestBtn').addEventListener('click', () => {
+                    this.runPerformanceTest();
+                });
+                
+                // Map events
+                this.mapContainer.addEventListener('click', (e) => {
+                    this.handleMapClick(e);
+                });
+                
+                this.mapContainer.addEventListener('mousemove', (e) => {
+                    this.updateCoordinates(e);
+                    if (this.isDragging && this.draggedCow) {
+                        this.moveCow(this.draggedCow, e);
+                    }
+                });
+                
+                this.mapContainer.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('cow')) {
+                        this.isDragging = true;
+                        this.draggedCow = e.target;
+                        this.draggedCow.style.cursor = 'grabbing';
+                        e.preventDefault();
+                    }
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    if (this.isDragging) {
+                        this.isDragging = false;
+                        if (this.draggedCow) {
+                            this.draggedCow.style.cursor = 'pointer';
+                            this.draggedCow = null;
+                        }
+                    }
+                });
+                
+                // Keyboard events for polygon completion
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && this.isDrawing) {
+                        this.completePolygon();
+                    } else if (e.key === 'Escape') {
+                        this.cancelDrawing();
+                    }
+                });
+                
+                this.updateAlgorithmDescription();
+            }
+            
+            setMode(mode) {
+                this.mode = mode;
+                document.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                
+                if (mode === 'geofence') {
+                    document.querySelector(`[data-shape="${this.selectedShape}"]`).classList.add('active');
+                    this.mapContainer.style.cursor = 'crosshair';
+                    
+                    if (this.selectedShape === 'polygon' || this.selectedShape === 'custom') {
+                        document.getElementById('drawingMode').style.display = 'block';
+                        document.getElementById('drawingMode').textContent = 
+                            `Drawing ${this.selectedShape} - Click points, Enter to complete, Esc to cancel`;
+                    }
+                } else if (mode === 'cow') {
+                    document.getElementById('addCowBtn').classList.add('active');
+                    this.mapContainer.style.cursor = 'crosshair';
+                } else {
+                    this.mapContainer.style.cursor = 'default';
+                    document.getElementById('drawingMode').style.display = 'none';
+                }
+            }
+            
+            handleMapClick(e) {
+                if (this.isDragging) return;
+                
+                const rect = this.mapContainer.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                if (this.mode === 'geofence') {
+                    if (this.selectedShape === 'polygon' || this.selectedShape === 'custom') {
+                        this.addPolygonPoint(x, y);
+                    } else {
+                        this.createGeofence(x, y);
+                        this.setMode('none');
+                    }
+                } else if (this.mode === 'cow') {
+                    this.createCow(x, y);
+                    this.setMode('none');
+                }
+            }
+            
+            createGeofence(x, y) {
+                const geofence = document.createElement('div');
+                geofence.className = `geofence ${this.selectedShape}`;
+                
+                let points = [];
+                let width, height;
+                
+                switch (this.selectedShape) {
+                    case 'circle':
+                        const radius = 60;
+                        width = height = radius * 2;
+                        geofence.style.left = (x - radius) + 'px';
+                        geofence.style.top = (y - radius) + 'px';
+                        points = this.generateCirclePoints(x, y, radius);
+                        break;
+                        
+                    case 'rectangle':
+                        width = 120;
+                        height = 80;
+                        geofence.style.left = (x - width/2) + 'px';
+                        geofence.style.top = (y - height/2) + 'px';
+                        points = [
+                            [x - width/2, y - height/2],
+                            [x + width/2, y - height/2],
+                            [x + width/2, y + height/2],
+                            [x - width/2, y + height/2]
+                        ];
+                        break;
+                        
+                    case 'square':
+                        width = height = 100;
+                        geofence.style.left = (x - width/2) + 'px';
+                        geofence.style.top = (y - height/2) + 'px';
+                        points = [
+                            [x - width/2, y - height/2],
+                            [x + width/2, y - height/2],
+                            [x + width/2, y + height/2],
+                            [x - width/2, y + height/2]
+                        ];
+                        break;
+                        
+                    case 'triangle':
+                        const size = 80;
+                        points = [
+                            [x, y - size],
+                            [x - size, y + size/2],
+                            [x + size, y + size/2]
+                        ];
+                        this.drawPolygonSVG(points, geofence);
+                        break;
+                }
+                
+                geofence.style.width = width + 'px';
+                geofence.style.height = height + 'px';
+                
+                this.mapContainer.appendChild(geofence);
+                
+                this.geofences.push({
+                    element: geofence,
+                    shape: this.selectedShape,
+                    points: points,
+                    x: x,
+                    y: y,
+                    width: width,
+                    height: height
+                });
+                
+                this.updateStats();
+                this.checkAllCowsInGeofences();
+            }
+            
+            addPolygonPoint(x, y) {
+                this.currentPoints.push([x, y]);
+                
+                // Add visual point
+                const point = document.createElement('div');
+                point.className = 'polygon-point';
+                point.style.left = x + 'px';
+                point.style.top = y + 'px';
+                this.mapContainer.appendChild(point);
+                
+                if (!this.isDrawing) {
+                    this.isDrawing = true;
+                }
+            }
+            
+            completePolygon() {
+                if (this.currentPoints.length < 3) {
+                    alert('Need at least 3 points for a polygon');
+                    return;
+                }
+                
+                const geofence = document.createElement('div');
+                geofence.className = 'geofence polygon';
+                
+                this.drawPolygonSVG(this.currentPoints, geofence);
+                
+                this.mapContainer.appendChild(geofence);
+                
+                this.geofences.push({
+                    element: geofence,
+                    shape: 'polygon',
+                    points: [...this.currentPoints]
+                });
+                
+                this.clearPolygonDrawing();
+                this.setMode('none');
+                this.updateStats();
+                this.checkAllCowsInGeofences();
+            }
+            
+            cancelDrawing() {
+                this.clearPolygonDrawing();
+                this.setMode('none');
+            }
+            
+            clearPolygonDrawing() {
+                this.currentPoints = [];
+                this.isDrawing = false;
+                
+                // Remove polygon points
+                document.querySelectorAll('.polygon-point').forEach(point => point.remove());
+            }
+            
+            drawPolygonSVG(points, container) {
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.style.position = 'absolute';
+                svg.style.top = '0';
+                svg.style.left = '0';
+                svg.style.width = '100%';
+                svg.style.height = '100%';
+                svg.style.pointerEvents = 'none';
+                svg.style.zIndex = '1';
+                
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                const pointsStr = points.map(p => `${p[0]},${p[1]}`).join(' ');
+                
+                polygon.setAttribute('points', pointsStr);
+                polygon.setAttribute('fill', 'rgba(255, 68, 68, 0.1)');
+                polygon.setAttribute('stroke', '#ff4444');
+                polygon.setAttribute('stroke-width', '3');
+                polygon.setAttribute('stroke-dasharray', '10,5');
+                
+                // Add pulsing animation
+                const animate = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+                animate.setAttribute('attributeName', 'stroke-width');
+                animate.setAttribute('values', '3;6;3');
+                animate.setAttribute('dur', '2s');
+                animate.setAttribute('repeatCount', 'indefinite');
+                polygon.appendChild(animate);
+                
+                svg.appendChild(polygon);
+                this.svgLayer.appendChild(svg);
+            }
+            
+            generateCirclePoints(cx, cy, radius, segments = 32) {
+                const points = [];
+                for (let i = 0; i < segments; i++) {
+                    const angle = (i / segments) * 2 * Math.PI;
+                    points.push([
+                        cx + radius * Math.cos(angle),
+                        cy + radius * Math.sin(angle)
+                    ]);
+                }
+                return points;
+            }
+            
+            createCow(x, y) {
+                const cow = document.createElement('div');
+                cow.className = 'cow';
+                cow.innerHTML = '🐄';
+                cow.style.left = (x - 12) + 'px';
+                cow.style.top = (y - 12) + 'px';
+                
+                this.mapContainer.appendChild(cow);
+                
+                const cowData = {
+                    element: cow,
+                    x: x,
+                    y: y,
+                    inside: false,
+                    vx: (Math.random() - 0.5) * 4, // Random velocity X (-2 to 2)
+                    vy: (Math.random() - 0.5) * 4, // Random velocity Y (-2 to 2)
+                    speed: Math.random() * 2 + 1    // Random speed multiplier (1 to 3)
+                };
+                
+                this.cows.push(cowData);
+                this.checkCowInGeofence(cowData);
+                this.updateStats();
+            }
+            
+            moveCow(cowElement, e) {
+                const rect = this.mapContainer.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                cowElement.style.left = (x - 12) + 'px';
+                cowElement.style.top = (y - 12) + 'px';
+                
+                const cowData = this.cows.find(c => c.element === cowElement);
+                if (cowData) {
+                    cowData.x = x;
+                    cowData.y = y;
+                    this.checkCowInGeofence(cowData);
+                    this.updateStats();
+                }
+            }
+            
+            checkCowInGeofence(cowData) {
+                const startTime = performance.now();
+                let isInside = false;
+                
+                for (const geofence of this.geofences) {
+                    if (this.pointInGeofence(cowData.x, cowData.y, geofence)) {
+                        isInside = true;
+                        break;
+                    }
+                }
+                
+                const endTime = performance.now();
+                this.performanceStats.totalTime += (endTime - startTime);
+                this.performanceStats.totalChecks++;
+                
+                cowData.inside = isInside;
+                cowData.element.classList.remove('inside', 'outside');
+                cowData.element.classList.add(isInside ? 'inside' : 'outside');
+            }
+            
+            pointInGeofence(x, y, geofence) {
+                switch (this.algorithm) {
+                    case 'raycasting':
+                        return this.raycastingAlgorithm(x, y, geofence.points);
+                    case 'winding':
+                        return this.windingNumberAlgorithm(x, y, geofence.points);
+                    case 'crossings':
+                        return this.crossingNumberAlgorithm(x, y, geofence.points);
+                    case 'boundingbox':
+                        return this.boundingBoxAlgorithm(x, y, geofence);
+                    default:
+                        return false;
+                }
+            }
+            
+            raycastingAlgorithm(x, y, points) {
+                let inside = false;
+                const n = points.length;
+                
+                for (let i = 0, j = n - 1; i < n; j = i++) {
+                    const [xi, yi] = points[i];
+                    const [xj, yj] = points[j];
+                    
+                    if (((yi > y) !== (yj > y)) && 
+                        (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                        inside = !inside;
+                    }
+                }
+                
+                return inside;
+            }
+            
+            windingNumberAlgorithm(x, y, points) {
+                let wn = 0;
+                const n = points.length;
+                
+                for (let i = 0; i < n; i++) {
+                    const [x1, y1] = points[i];
+                    const [x2, y2] = points[(i + 1) % n];
+                    
+                    if (y1 <= y) {
+                        if (y2 > y) {
+                            if (this.isLeft(x1, y1, x2, y2, x, y) > 0) {
+                                wn++;
+                            }
+                        }
+                    } else {
+                        if (y2 <= y) {
+                            if (this.isLeft(x1, y1, x2, y2, x, y) < 0) {
+                                wn--;
+                            }
+                        }
+                    }
+                }
+                
+                return wn !== 0;
+            }
+            
+            isLeft(x0, y0, x1, y1, x2, y2) {
+                return ((x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0));
+            }
+            
+            crossingNumberAlgorithm(x, y, points) {
+                let cn = 0;
+                const n = points.length;
+                
+                for (let i = 0; i < n; i++) {
+                    const [x1, y1] = points[i];
+                    const [x2, y2] = points[(i + 1) % n];
+                    
+                    if (((y1 <= y) && (y < y2)) || ((y2 <= y) && (y < y1))) {
+                        const vt = (y - y1) / (y2 - y1);
+                        if (x < x1 + vt * (x2 - x1)) {
+                            cn++;
+                        }
+                    }
+                }
+                
+                return (cn & 1) === 1;
+            }
+            
+            boundingBoxAlgorithm(x, y, geofence) {
+                // Fast bounding box check (not accurate for complex shapes)
+                if (geofence.shape === 'circle') {
+                    const dx = x - geofence.x;
+                    const dy = y - geofence.y;
+                    return (dx * dx + dy * dy) <= (geofence.width / 2) * (geofence.width / 2);
+                }
+                
+                // For other shapes, use simple bounding box
+                const minX = Math.min(...geofence.points.map(p => p[0]));
+                const maxX = Math.max(...geofence.points.map(p => p[0]));
+                const minY = Math.min(...geofence.points.map(p => p[1]));
+                const maxY = Math.max(...geofence.points.map(p => p[1]));
+                
+                return x >= minX && x <= maxX && y >= minY && y <= maxY;
+            }
+            
+            checkAllCowsInGeofences() {
+                this.cows.forEach(cow => {
+                    this.checkCowInGeofence(cow);
+                });
+                this.updateStats();
+            }
+            
+            updateStats() {
+                const total = this.cows.length;
+                const inside = this.cows.filter(cow => cow.inside).length;
+                const outside = total - inside;
+                const totalGeofences = this.geofences.length;
+                const avgTime = this.performanceStats.totalChecks > 0 ? 
+                    (this.performanceStats.totalTime / this.performanceStats.totalChecks).toFixed(3) : 0;
+                
+                document.getElementById('totalCows').textContent = total;
+                document.getElementById('insideCows').textContent = inside;
+                document.getElementById('outsideCows').textContent = outside;
+                document.getElementById('totalGeofences').textContent = totalGeofences;
+                document.getElementById('avgTime').textContent = avgTime + 'ms';
+                document.getElementById('totalChecks').textContent = this.performanceStats.totalChecks;
+            }
+            
+            updateCoordinates(e) {
+                const rect = this.mapContainer.getBoundingClientRect();
+                const x = Math.round(e.clientX - rect.left);
+                const y = Math.round(e.clientY - rect.top);
+                document.getElementById('coordinates').textContent = `X: ${x}, Y: ${y}`;
+            }
+            
+            updateAlgorithmDescription() {
+                const descriptions = {
+                    'raycasting': 'Ray Casting: Shoots ray from point and counts intersections',
+                    'winding': 'Winding Number: Calculates how polygon winds around point',
+                    'crossings': 'Crossing Number: Counts edge crossings (odd = inside)',
+                    'boundingbox': 'Bounding Box: Fast but less accurate rectangular bounds check'
+                };
+                
+                document.getElementById('algorithmDescription').textContent = descriptions[this.algorithm];
+            }
+            
+            toggleAnimation() {
+                this.isAnimating = !this.isAnimating;
+                const btn = document.getElementById('animateBtn');
+                
+                if (this.isAnimating) {
+                    btn.textContent = '⏸️ Stop Animation';
+                    btn.classList.add('active');
+                    this.startAnimation();
+                } else {
+                    btn.textContent = '🎬 Animate Cows';
+                    btn.classList.remove('active');
+                    this.stopAnimation();
+                }
+            }
+            
+            startAnimation() {
+                const animate = () => {
+                    if (!this.isAnimating) return;
+                    
+                    const rect = this.mapContainer.getBoundingClientRect();
+                    const maxX = rect.width - 30;
+                    const maxY = rect.height - 30;
+                    
+                    this.cows.forEach(cow => {
+                        // Update position
+                        cow.x += cow.vx * cow.speed;
+                        cow.y += cow.vy * cow.speed;
+                        
+                        // Boundary collision detection with bounce
+                        if (cow.x <= 15 || cow.x >= maxX) {
+                            cow.vx = -cow.vx;
+                            cow.x = Math.max(15, Math.min(maxX, cow.x));
+                            
+                            // Add some randomness to prevent perfect bouncing
+                            cow.vy += (Math.random() - 0.5) * 0.5;
+                        }
+                        
+                        if (cow.y <= 15 || cow.y >= maxY) {
+                            cow.vy = -cow.vy;
+                            cow.y = Math.max(15, Math.min(maxY, cow.y));
+                            
+                            // Add some randomness to prevent perfect bouncing
+                            cow.vx += (Math.random() - 0.5) * 0.5;
+                        }
+                        
+                        // Limit velocity to prevent cows from going too fast
+                        const maxVelocity = 3;
+                        cow.vx = Math.max(-maxVelocity, Math.min(maxVelocity, cow.vx));
+                        cow.vy = Math.max(-maxVelocity, Math.min(maxVelocity, cow.vy));
+                        
+                        // Add slight random movement for more organic feel
+                        cow.vx += (Math.random() - 0.5) * 0.1;
+                        cow.vy += (Math.random() - 0.5) * 0.1;
+                        
+                        // Apply friction to slow down over time
+                        cow.vx *= 0.99;
+                        cow.vy *= 0.99;
+                        
+                        // Update DOM element position
+                        cow.element.style.left = (cow.x - 12) + 'px';
+                        cow.element.style.top = (cow.y - 12) + 'px';
+                        
+                        // Add rotation based on velocity for more realistic movement
+                        const angle = Math.atan2(cow.vy, cow.vx) * (180 / Math.PI);
+                        cow.element.style.transform = `rotate(${angle}deg)`;
+                        
+                        // Check geofence status
+                        this.checkCowInGeofence(cow);
+                    });
+                    
+                    this.updateStats();
+                    this.animationFrame = requestAnimationFrame(animate);
+                };
+                
+                animate();
+            }
+            
+            stopAnimation() {
+                if (this.animationFrame) {
+                    cancelAnimationFrame(this.animationFrame);
+                    this.animationFrame = null;
+                }
+                
+                // Reset cow rotations
+                this.cows.forEach(cow => {
+                    cow.element.style.transform = '';
+                });
+            }
+            
+            addRandomCows() {
+                const rect = this.mapContainer.getBoundingClientRect();
+                const count = 10;
+                
+                for (let i = 0; i < count; i++) {
+                    const x = Math.random() * (rect.width - 40) + 20;
+                    const y = Math.random() * (rect.height - 40) + 20;
+                    this.createCow(x, y);
+                }
+            }
+            
+            runPerformanceTest() {
+                if (this.cows.length === 0 || this.geofences.length === 0) {
+                    alert('Add some cows and geofences first!');
+                    return;
+                }
+                
+                // Reset performance stats
+                this.performanceStats = { totalTime: 0, totalChecks: 0 };
+                
+                const testIterations = 1000;
+                const startTime = performance.now();
+                
+                // Run multiple checks to get better performance data
+                for (let i = 0; i < testIterations; i++) {
+                    this.cows.forEach(cow => {
+                        this.checkCowInGeofence(cow);
+                    });
+                }
+                
+                const endTime = performance.now();
+                const totalTestTime = endTime - startTime;
+                
+                alert(`Performance Test Results:
+Algorithm: ${this.algorithm.toUpperCase()}
+Total test time: ${totalTestTime.toFixed(2)}ms
+Iterations: ${testIterations}
+Cows: ${this.cows.length}
+Geofences: ${this.geofences.length}
+Average time per check: ${(this.performanceStats.totalTime / this.performanceStats.totalChecks).toFixed(4)}ms
+Checks per second: ${Math.round(this.performanceStats.totalChecks / (totalTestTime / 1000))}`);
+                
+                this.updateStats();
+            }
+            
+            clearAll() {
+                // Remove all cows
+                this.cows.forEach(cow => {
+                    cow.element.remove();
+                });
+                this.cows = [];
+                
+                // Remove all geofences
+                this.geofences.forEach(geofence => {
+                    geofence.element.remove();
+                });
+                this.geofences = [];
+                
+                // Clear SVG elements
+                this.svgLayer.innerHTML = '';
+                
+                // Clear polygon drawing
+                this.clearPolygonDrawing();
+                
+                // Reset performance stats
+                this.performanceStats = { totalTime: 0, totalChecks: 0 };
+                
+                this.setMode('none');
+                this.updateStats();
+            }
+        }
+        
+        // Initialize the simulation when the page loads
+        window.addEventListener('load', () => {
+            new GeofencingSimulation();
+        });
+    </script>
+</body>
+</html>
